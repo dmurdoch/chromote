@@ -1,6 +1,6 @@
 Package: chromote
 Title: Headless Chrome Web Browser Interface
-Version: 0.0.0.9002
+Version: 0.0.0.9003
 Authors@R: c(
     person("Winston", "Chang", role = c("aut", "cre"), email = "winston@rstudio.com"),
     person(given = "RStudio", role = c("cph", "fnd"))
@@ -22,4 +22,4 @@ Imports:
 Suggests:
     showimage
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1
