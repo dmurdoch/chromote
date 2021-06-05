@@ -26,13 +26,18 @@ ChromoteSession <- R6Class(
     #' @param wait_ If `FALSE`, return a [promises::promise()] of a new
     #'   `ChromoteSession` object. Otherwise, block during initialization, and
     #'   return a `ChromoteSession` object directly.
+    #' @param auto_events If `NULL` (the default), use the `auto_events` setting
+    #'   from the parent `Chromote` object. If `TRUE`, enable automatic
+    #'   event enabling/disabling; if `FALSE`, disable automatic event
+    #'   enabling/disabling.
     #' @return A new `ChromoteSession` object.
     initialize = function(
       parent = default_chromote_object(),
       width = 992,
       height = 744,
       targetId = NULL,
-      wait_ = TRUE
+      wait_ = TRUE,
+      auto_events = NULL
     ) {
       self$parent <- parent
 
@@ -67,6 +72,7 @@ ChromoteSession <- R6Class(
       # Graft the entries from self$protocol onto self
       list2env(self$protocol, self)
 
+      private$auto_events <- auto_events
       private$event_manager <- EventManager$new(self)
       private$is_active_ <- TRUE
 
@@ -78,6 +84,19 @@ ChromoteSession <- R6Class(
         then(function(value) {
           private$pixel_ratio <- value$result$value
         })
+
+      # When a target crashes, raise a warning.
+      if (!is.null(self$Inspector$targetCrashed)) {
+        p <- p$
+          then(function(value) {
+            self$Inspector$targetCrashed(timeout_ = NULL, wait_ = FALSE, function(value) {
+              warning("Chromote has received a Inspector.targetCrashed event. This means that the ChromoteSession has probably crashed.")
+              # Even if no targetId nor sessionId is returned by Inspector.targetCashed
+              # mark the session as closed. This will close all sessions..
+              self$mark_closed()
+            })
+          })
+      }
 
       if (wait_) {
         self$wait_for(p)
@@ -165,7 +184,11 @@ ChromoteSession <- R6Class(
     },
 
     get_auto_events = function() {
-      self$parent$get_auto_events()
+      if (!is.null(private$auto_events)) {
+        private$auto_events
+      } else {
+        self$parent$get_auto_events()
+      }
     },
 
     debug_log = function(...) {
@@ -189,6 +212,7 @@ ChromoteSession <- R6Class(
     is_active_ = NULL,
     event_manager = NULL,
     pixel_ratio = NULL,
+    auto_events = NULL,
     init_promise_ = NULL,
 
     register_event_listener = function(event, callback = NULL, timeout = NULL) {
